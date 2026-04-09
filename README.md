@@ -71,15 +71,37 @@ Sebelum mulai menjalankan bot impianmu, pastikan komputer/server kamu sudah meme
 
 ## 🚀 Panduan Instalasi (Langkah Demi Langkah)
 
-Tenang saja, konfigurasinya sangat gampang walau kamu baru belajar!
+Tenang saja, konfigurasinya sangat gampang walau kamu baru belajar! Kami mendukung sistem Windows, Panel Pterodactyl, Docker, hingga Termux!
 
 ### 1. Ambil Source Code
-Buka terminal (Command Prompt/Git Bash) lalu jalankan:
+Buka terminal (Command Prompt/Git Bash/Termux) lalu jalankan:
 
 ```bash
 git clone https://github.com/LuckyArch/OurinMD.git
 cd OurinMD
 ```
+
+---
+
+### 🐧 Khusus Pengguna Termux / Linux
+Kami sediakan script otomatis buat kamu biar gak pusing install modul tambahan (karena fitur canvas/sharp butuh dependensi C++). Cukup jalankan:
+```bash
+bash install.sh
+```
+
+---
+
+### 🐳 Menggunakan Docker (Tinggal Pakai)
+Buat kamu yang pakai VPS dan ogah ribet, fitur ini sangat direkomendasikan karena sudah dibundle dengan environment terbaik (Node 22 Bookworm):
+```bash
+docker build -t ourin-md .
+docker run -d --name ourin-bot ourin-md
+```
+
+---
+
+### ⚙️ Instalasi Manual (Windows / Lainnya)
+Jika kamu tidak menggunakan Termux atau Docker, ikuti tahap instalasi standar ini:
 
 ### 2. Instal Dependensi (Module)
 Selanjutnya, kita install dulu semua alat-alat tempurnya:
