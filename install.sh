@@ -1,123 +1,139 @@
 #!/usr/bin/env bash
 
-CYAN='\033[0;36m'
-GREEN='\033[1;32m'
-RED='\033[1;31m'
-YELLOW='\033[1;33m'
-PURPLE='\033[1;35m'
+W='\033[1;37m'
+G='\033[1;32m'
+R='\033[1;31m'
+Y='\033[1;33m'
+C='\033[1;36m'
+P='\033[1;35m'
+B='\033[1;34m'
+DIM='\033[2m'
 NC='\033[0m'
 
 clear
 
-echo -e "${PURPLE}"
+echo -e "${P}"
 cat << "EOF"
-  ██████╗ ██████╗ ██████╗ ██╗███╗   ██╗    ███╗   ███╗██████╗
- ██╔═══██╗██╔══██╗██╔═══██╗██║████╗  ██║    ████╗ ████║██╔══██╗
- ██║   ██║██║  ██║██████╔╝██║██╔██╗ ██║    ██╔████╔██║██║  ██║
- ██║   ██║██║  ██║██╔══██╗██║██║╚██╗██║    ██║╚██╔╝██║██║  ██║
+  ██████╗ ██╗   ██╗██████╗ ██╗███╗   ██╗    ███╗   ███╗██████╗ 
+ ██╔═══██╗██║   ██║██╔══██╗██║████╗  ██║    ████╗ ████║██╔══██╗
+ ██║   ██║██║   ██║██████╔╝██║██╔██╗ ██║    ██╔████╔██║██║  ██║
+ ██║   ██║██║   ██║██╔══██╗██║██║╚██╗██║    ██║╚██╔╝██║██║  ██║
  ╚██████╔╝╚██████╔╝██║  ██║██║██║ ╚████║    ██║ ╚═╝ ██║██████╔╝
   ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝    ╚═╝     ╚═╝╚═════╝
 EOF
 echo -e "${NC}"
+echo -e "${DIM}  Auto Installer v2.3.0 — by Zann${NC}"
+echo ""
 
-echo -e "${CYAN}[*] Menyiapkan auto installer...${NC}\n"
-sleep 1
+run_step() {
+    local label="$1"
+    shift
+    local cmd="$@"
 
-show_progress() {
-    local pid=$1
-    local text=$2
-    local progress=0
-    local speed=2
-    
-    while [ "$(ps a | awk '{print $1}' | grep -w $pid)" ]; do
-        if [ $progress -lt 99 ]; then
-            progress=$((progress + speed))
-        fi
-        
-        printf "\r${YELLOW}[!] %-35s : [%-20s] %d%%${NC}" "$text" "$(printf '#%.0s' $(seq 1 $((progress / 5))))" "$progress"
-        sleep 0.5
-    done
-    
-    wait $pid
-    printf "\r${GREEN}[✔] %-35s : [%-20s] 100%%${NC}\n" "$text" "$(printf '#%.0s' $(seq 1 20))"
+    printf "${Y}  ⏳  ${W}%-40s${NC}" "$label"
+
+    eval "$cmd" > /tmp/ourin_install.log 2>&1
+    local exit_code=$?
+
+    if [ $exit_code -eq 0 ]; then
+        printf "\r${G}  ✅  ${W}%-40s${NC}\n" "$label"
+    else
+        printf "\r${R}  ❌  ${W}%-40s${NC}\n" "$label"
+        echo -e "${R}      └─ Gagal! Cek log: /tmp/ourin_install.log${NC}"
+    fi
+
+    return $exit_code
 }
 
-printf "\r${YELLOW}[!] Mengecek OS kamu                  : [                    ] 0%%${NC}"
-sleep 1
-printf "\r${YELLOW}[!] Mengecek OS kamu                  : [##########          ] 50%%${NC}"
-sleep 1
-printf "\r${GREEN}[✔] Mengecek OS kamu                  : [####################] 100%%${NC}\n"
+echo -e "${C}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${B}  📋  ${W}Mengecek sistem operasi kamu...${NC}"
+echo -e "${C}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
 
 if command -v pkg &> /dev/null; then
-    echo -e "\n${CYAN}[*] OS Terdeteksi: Termux (Android)${NC}"
-    
-    pkg update -y > /dev/null 2>&1 & 
-    show_progress $! "Update server Termux"
-    
-    pkg upgrade -y > /dev/null 2>&1 & 
-    show_progress $! "Upgrade library lokal"
-    
-    pkg install nodejs -y > /dev/null 2>&1 & 
-    show_progress $! "Menginstal Node.JS"
-    
-    pkg install ffmpeg -y > /dev/null 2>&1 & 
-    show_progress $! "Menginstal FFmpeg"
-    
-    pkg install binutils clang libvips git build-essential python -y > /dev/null 2>&1 & 
-    show_progress $! "Menginstal pendukung (C++ Compiler)"
-    
+    echo -e "${G}  🤖  ${W}Terdeteksi: ${C}Termux (Android)${NC}"
+    echo ""
+
+    run_step "Update repository Termux..." "pkg update -y"
+    run_step "Upgrade package lama..." "pkg upgrade -y"
+    run_step "Instal Node.js..." "pkg install nodejs -y"
+    run_step "Instal FFmpeg..." "pkg install ffmpeg -y"
+    run_step "Instal Git..." "pkg install git -y"
+    run_step "Instal Python..." "pkg install python -y"
+    run_step "Instal C++ Compiler (clang)..." "pkg install clang binutils build-essential -y"
+    run_step "Instal libvips (untuk sharp)..." "pkg install libvips -y"
+
+    export npm_config_build_from_source=true
+
 elif command -v apt-get &> /dev/null; then
-    echo -e "\n${CYAN}[*] OS Terdeteksi: Ubuntu / Debian / VPS Linux${NC}"
-    
-    sudo apt-get update -y > /dev/null 2>&1 & 
-    show_progress $! "Update repository apt"
-    
-    sudo apt-get install -y curl ffmpeg libvips-dev build-essential python3 git > /dev/null 2>&1 & 
-    show_progress $! "Menginstal library utama"
+    echo -e "${G}  🐧  ${W}Terdeteksi: ${C}Ubuntu / Debian / VPS Linux${NC}"
+    echo ""
+
+    run_step "Update repository apt..." "sudo apt-get update -y"
+    run_step "Instal FFmpeg..." "sudo apt-get install -y ffmpeg"
+    run_step "Instal Git..." "sudo apt-get install -y git"
+    run_step "Instal Build Tools..." "sudo apt-get install -y build-essential python3 curl"
+    run_step "Instal libvips-dev..." "sudo apt-get install -y libvips-dev"
 
     if ! command -v node &> /dev/null; then
-        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - > /dev/null 2>&1 &
-        show_progress $! "Mengambil Node.js repo"
-        
-        sudo apt-get install -y nodejs > /dev/null 2>&1 & 
-        show_progress $! "Menginstal Node.js versi terbaru"
+        run_step "Setup repo Node.js 22..." "curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -"
+        run_step "Instal Node.js..." "sudo apt-get install -y nodejs"
     fi
 
 elif command -v pacman &> /dev/null; then
-    echo -e "\n${CYAN}[*] OS Terdeteksi: Arch Linux${NC}"
-    sudo pacman -Syu --noconfirm > /dev/null 2>&1 & 
-    show_progress $! "Mendownload update Arch"
-    
-    sudo pacman -S --noconfirm nodejs npm ffmpeg vips base-devel python git > /dev/null 2>&1 & 
-    show_progress $! "Menginstal Node dan kawan2"
+    echo -e "${G}  🏗️  ${W}Terdeteksi: ${C}Arch Linux${NC}"
+    echo ""
+
+    run_step "Update & upgrade sistem..." "sudo pacman -Syu --noconfirm"
+    run_step "Instal Node.js & NPM..." "sudo pacman -S --noconfirm nodejs npm"
+    run_step "Instal FFmpeg & Git..." "sudo pacman -S --noconfirm ffmpeg git"
+    run_step "Instal Build Tools..." "sudo pacman -S --noconfirm base-devel python vips"
 else
-    echo -e "${RED}\n[X] OS tidak dikenali! Tolong instal manual.${NC}"
-    sleep 2
+    echo -e "${R}  ❌  ${W}OS tidak dikenali. Silakan instal manual:${NC}"
+    echo -e "${W}      Node.js >= 22, FFmpeg, Git, Python, libvips${NC}"
     exit 1
 fi
 
-echo -e "\n${GREEN}[✔] Mantap! Semua module dasar berhasil tersetting.${NC}\n"
+echo ""
+echo -e "${C}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${B}  🔍  ${W}Verifikasi environment...${NC}"
+echo -e "${C}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
 
-echo -e "\n${CYAN}[*] Mengecek versi node...${NC}\n"
-node -v
+NODE_VER=$(node -v 2>/dev/null || echo "tidak ditemukan")
+NPM_VER=$(npm -v 2>/dev/null || echo "tidak ditemukan")
+GIT_VER=$(git --version 2>/dev/null | awk '{print $3}' || echo "tidak ditemukan")
 
-echo -e "\n${CYAN}[*] Mengecek versi npm...${NC}\n"
-npm -v
+echo -e "${G}  ✅  ${W}Node.js  : ${C}${NODE_VER}${NC}"
+echo -e "${G}  ✅  ${W}NPM      : ${C}v${NPM_VER}${NC}"
+echo -e "${G}  ✅  ${W}Git      : ${C}v${GIT_VER}${NC}"
 
-echo -e "\n${GREEN}[✔] Mantap! Semua module dasar berhasil tersetting.${NC}\n"
+echo ""
+echo -e "${C}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo -e "${B}  📦  ${W}Menginstal module bot (npm install)...${NC}"
+echo -e "${DIM}      Proses ini bisa memakan waktu beberapa menit.${NC}"
+echo -e "${C}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+echo ""
 
-# Perbaikan khusus Termux untuk package "sharp" & "canvas"
-if command -v pkg &> /dev/null; then
-    export npm_config_build_from_source=true
+npm install
+NPM_EXIT=$?
+
+echo ""
+
+if [ $NPM_EXIT -eq 0 ]; then
+    echo -e "${C}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${G}  ✅  INSTALASI SELESAI — BOT SIAP DIJALANKAN${NC}"
+    echo -e "${C}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${W}  1. Edit file ${C}config.js${W} (isi nomor WA kamu)${NC}"
+    echo -e "${W}  2. Jalankan bot:  ${Y}npm start${NC}"
+    echo ""
+else
+    echo -e "${C}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${R}  ❌  NPM INSTALL GAGAL${NC}"
+    echo -e "${C}  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo ""
+    echo -e "${W}  Coba jalankan ulang: ${Y}npm install${NC}"
+    echo -e "${W}  Atau laporkan error di GitHub Issues.${NC}"
+    echo ""
 fi
-
-npm install > /dev/null 2>&1 & 
-show_progress $! "Mengunduh module bot (NPM Local)"
-
-echo -e "\n${PURPLE}===============================================${NC}"
-echo -e "${GREEN}        [✔] INSTALASI BOT SELESAI [✔]          ${NC}"
-echo -e "${PURPLE}===============================================${NC}"
-echo -e "${CYAN}    Silakan ubah nomormu di config.js          ${NC}"
-echo -e "${CYAN}    Lalu nyalakan bot dengan ketik:            ${NC}"
-echo -e "${YELLOW}                   npm start                   ${NC}"
-echo -e "${PURPLE}===============================================${NC}\n"
