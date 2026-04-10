@@ -1,59 +1,91 @@
 #!/usr/bin/env bash
 
-# =======================================================
-# OURIN MD V2.3.0 - Auto Installer Script
-# =======================================================
-# Mendukung: Ubuntu/Debian, Termux, & Arch Linux
-# =======================================================
+CYAN='\033[0;36m'
+GREEN='\033[1;32m'
+RED='\033[1;31m'
+YELLOW='\033[1;33m'
+PURPLE='\033[1;35m'
+NC='\033[0m'
 
-echo "Memulai proses instalasi untuk OURIN MD V2.3.0..."
+clear
 
-# Deteksi OS / Package Manager
+echo -e "${PURPLE}"
+cat << "EOF"
+  ██████╗ ██████╗ ██████╗ ██╗███╗   ██╗    ███╗   ███╗██████╗
+ ██╔═══██╗██╔══██╗██╔═══██╗██║████╗  ██║    ████╗ ████║██╔══██╗
+ ██║   ██║██║  ██║██████╔╝██║██╔██╗ ██║    ██╔████╔██║██║  ██║
+ ██║   ██║██║  ██║██╔══██╗██║██║╚██╗██║    ██║╚██╔╝██║██║  ██║
+ ╚██████╔╝╚██████╔╝██║  ██║██║██║ ╚████║    ██║ ╚═╝ ██║██████╔╝
+  ╚═════╝  ╚═════╝ ╚═╝  ╚═╝╚═╝╚═╝  ╚═══╝    ╚═╝     ╚═╝╚═════╝
+EOF
+echo -e "${NC}"
+
+echo -e "${CYAN}[*] Menyiapkan auto installer...${NC}"
+sleep 1
+
+spinner() {
+    local pid=$1
+    local delay=0.1
+    local spinstr='|/-\'
+    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
+        local temp=${spinstr#?}
+        printf " [%c]  " "$spinstr"
+        local spinstr=$temp${spinstr%"$temp"}
+        sleep $delay
+        printf "\b\b\b\b\b\b"
+    done
+    printf "    \b\b\b\b"
+}
+
+LOADING_TEXT="[!] Mengecek sistem operasi kamu"
+echo -n -e "${YELLOW}${LOADING_TEXT}${NC}"
+sleep 2 & spinner $!
+echo -e "\n${GREEN}[✔] Sistem berhasil dikenali${NC}\n"
+
 if command -v pkg &> /dev/null; then
-    echo "OS / Env Terdeteksi: TERMUX (Android)"
-    echo "Memperbarui package list Termux..."
-    pkg update -y && pkg upgrade -y
+    echo -e "${CYAN}[*] Tipe OS: Termux (Android)${NC}"
     
-    echo "Menginstal dependensi utama (Node.js, FFmpeg, Git, libvips)..."
-    pkg install nodejs-lts ffmpeg libvips git build-essential python -y
+    echo -e "${YELLOW}[!] Sedang memperbarui package Termux...${NC}"
+    pkg update -y > /dev/null 2>&1 & spinner $!
+    pkg upgrade -y > /dev/null 2>&1 & spinner $!
+    
+    echo -e "${YELLOW}[!] Menginstal package pendukung (Nodejs, FFmpeg, dll)...${NC}"
+    pkg install nodejs-lts ffmpeg libvips git build-essential python -y > /dev/null 2>&1 & spinner $!
     
 elif command -v apt-get &> /dev/null; then
-    echo "OS Terdeteksi: DEBIAN / UBUNTU"
-    echo "Memperbarui package list..."
-    sudo apt-get update -y
+    echo -e "${CYAN}[*] Tipe OS: Ubuntu / Debian / VPS Linux${NC}"
     
-    echo "Menginstal dependensi utama (FFmpeg, git, libvips)..."
-    sudo apt-get install -y curl ffmpeg libvips-dev build-essential python3 git
+    echo -e "${YELLOW}[!] Sedang memperbarui package apt dasar...${NC}"
+    sudo apt-get update -y > /dev/null 2>&1 & spinner $!
+    
+    echo -e "${YELLOW}[!] Menginstal package pendukung utama...${NC}"
+    sudo apt-get install -y curl ffmpeg libvips-dev build-essential python3 git > /dev/null 2>&1 & spinner $!
 
-    # Cek Node.js
     if ! command -v node &> /dev/null; then
-        echo "Node.js belum terinstall! Mengambil instalasi Node.js 22 LTS..."
-        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
-        sudo apt-get install -y nodejs
-    else
-        echo "Node.js sudah terinstall: $(node -v)"
+        echo -e "${YELLOW}[!] Menginstal Node.js versi 22...${NC}"
+        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - > /dev/null 2>&1 & spinner $!
+        sudo apt-get install -y nodejs > /dev/null 2>&1 & spinner $!
     fi
 
 elif command -v pacman &> /dev/null; then
-    echo "OS Terdeteksi: ARCH LINUX"
-    sudo pacman -Syu --noconfirm
-    sudo pacman -S --noconfirm nodejs npm ffmpeg vips base-devel python git
+    echo -e "${CYAN}[*] Tipe OS: Arch Linux${NC}"
+    sudo pacman -Syu --noconfirm > /dev/null 2>&1 & spinner $!
+    sudo pacman -S --noconfirm nodejs npm ffmpeg vips base-devel python git > /dev/null 2>&1 & spinner $!
 else
-    echo "Package manager tidak didukung oleh script otomatis ini."
-    echo "Harap instal manual: Node.js (>=22), FFmpeg, Python, dan Build Essential."
-    sleep 3
+    echo -e "${RED}[X] OS tidak dikenali! Tolong instal manual.${NC}"
+    sleep 2
+    exit 1
 fi
 
-echo "==============================================="
-echo "Menginstal module NPM (ini mungkin butuh beberapa menit)..."
-echo "==============================================="
+echo -e "${GREEN}[✔] Semua package pendukung telah berhasil diinstal!${NC}\n"
 
-# Install package
-npm install
+echo -e "${CYAN}[*] Sedang mendownload dan menginstal module bot (NPM)...${NC}"
+npm install & spinner $!
 
-echo "==============================================="
-echo "Instalasi selesai! 🎉"
-echo "Silakan edit file config.js sesuai kebutuhanmu,"
-echo "Lalu jalankan bot dengan perintah:"
-echo "   npm start"
-echo "==============================================="
+echo -e "\n${PURPLE}===============================================${NC}"
+echo -e "${GREEN}    [✔] INSTALASI SELESAI [✔]    ${NC}"
+echo -e "${PURPLE}===============================================${NC}"
+echo -e "${CYAN}    Silakan ubah nomor kamu di file config.js  ${NC}"
+echo -e "${CYAN}    Setelah itu, nyalakan bot dengan ketik:    ${NC}"
+echo -e "${YELLOW}                 npm start                     ${NC}"
+echo -e "${PURPLE}===============================================${NC}\n"
