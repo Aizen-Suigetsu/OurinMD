@@ -57,10 +57,21 @@ run_task() {
     if [ $code -eq 0 ]; then
         printf "\r${CLR}  ${G}✓${NC}  ${W}%-36s${NC} ${G}100%%${NC}\n" "$label"
     else
-        printf "\r${CLR}  ${R}✗${NC}  ${W}%-36s${NC} ${R}error${NC}\n" "$label"
+        printf "\r${CLR}  ${Y}!${NC}  ${W}%-36s${NC} ${Y}warn${NC}\n" "$label"
     fi
 
     return $code
+}
+
+check_tool() {
+    local cmd="$1"
+    local name="$2"
+    if command -v "$cmd" &> /dev/null; then
+        local ver=$($cmd --version 2>/dev/null | head -1)
+        echo -e "  ${G}✓${NC}  ${W}${name}${NC} ${DIM}${ver}${NC}"
+    else
+        echo -e "  ${R}✗${NC}  ${W}${name} tidak ditemukan!${NC}"
+    fi
 }
 
 echo -e "  ${W}Mengecek OS kamu...${NC}"
@@ -70,72 +81,76 @@ if command -v pkg &> /dev/null; then
     echo -e "  ${G}✓${NC}  ${W}Terdeteksi: ${C}Termux (Android)${NC}"
     echo ""
 
-    export DEBIAN_FRONTEND=noninteractive
+    run_task "Update & upgrade Termux" "yes | pkg update && yes | pkg upgrade"
+    run_task "Instal semua package" "yes | pkg install nodejs ffmpeg git python clang binutils build-essential libvips"
 
-    run_task "Update repository Termux" "pkg update -y"
-    run_task "Instal Node.js" "pkg install -y nodejs"
-    run_task "Instal FFmpeg" "pkg install -y ffmpeg"
-    run_task "Instal Git" "pkg install -y git"
-    run_task "Instal Python" "pkg install -y python"
-    run_task "Instal C++ Compiler" "pkg install -y clang binutils build-essential"
-    run_task "Instal libvips" "pkg install -y libvips"
+    echo ""
+    check_tool "node" "Node.js"
+    check_tool "ffmpeg" "FFmpeg"
+    check_tool "git" "Git"
+    check_tool "clang" "Clang"
 
     export CC=clang
     export CXX=clang++
-    export npm_config_sharp_build_from_source=true
-    export npm_config_build_from_source=true
 
 elif command -v apt-get &> /dev/null; then
     echo -e "  ${G}✓${NC}  ${W}Terdeteksi: ${C}Ubuntu / Debian${NC}"
     echo ""
 
     run_task "Update repository apt" "sudo apt-get update -y"
-    run_task "Instal FFmpeg" "sudo apt-get install -y ffmpeg"
-    run_task "Instal Git" "sudo apt-get install -y git"
-    run_task "Instal Build Tools" "sudo apt-get install -y build-essential python3 curl"
-    run_task "Instal libvips-dev" "sudo apt-get install -y libvips-dev"
+    run_task "Instal semua package" "sudo apt-get install -y ffmpeg git build-essential python3 curl libvips-dev"
 
     if ! command -v node &> /dev/null; then
         run_task "Setup repo Node.js 22" "curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -"
         run_task "Instal Node.js" "sudo apt-get install -y nodejs"
     fi
 
+    echo ""
+    check_tool "node" "Node.js"
+    check_tool "ffmpeg" "FFmpeg"
+    check_tool "git" "Git"
+
 elif command -v pacman &> /dev/null; then
     echo -e "  ${G}✓${NC}  ${W}Terdeteksi: ${C}Arch Linux${NC}"
     echo ""
 
     run_task "Update sistem" "sudo pacman -Syu --noconfirm"
-    run_task "Instal Node.js & NPM" "sudo pacman -S --noconfirm nodejs npm"
-    run_task "Instal FFmpeg & Git" "sudo pacman -S --noconfirm ffmpeg git"
-    run_task "Instal Build Tools" "sudo pacman -S --noconfirm base-devel python vips"
+    run_task "Instal semua package" "sudo pacman -S --noconfirm nodejs npm ffmpeg git base-devel python vips"
+
+    echo ""
+    check_tool "node" "Node.js"
+    check_tool "ffmpeg" "FFmpeg"
+    check_tool "git" "Git"
 else
     echo -e "  ${R}✗${NC}  ${W}OS tidak dikenali, instal manual ya.${NC}"
     exit 1
 fi
 
 echo ""
-NODE_VER=$(node -v 2>/dev/null || echo "?")
-NPM_VER=$(npm -v 2>/dev/null || echo "?")
-GIT_VER=$(git --version 2>/dev/null | cut -d' ' -f3 || echo "?")
-
-echo -e "  ${G}✓${NC}  ${W}Node ${C}${NODE_VER}${NC}  |  ${W}NPM ${C}v${NPM_VER}${NC}  |  ${W}Git ${C}v${GIT_VER}${NC}"
-echo ""
 echo -e "  ${W}Mulai npm install, agak lama ya sabar...${NC}"
 echo ""
 
-run_task "Download semua module bot" "npm install"
+run_task "Download semua module bot" "npm install --build-from-source"
 NPM_EXIT=$?
+
+if [ $NPM_EXIT -ne 0 ]; then
+    echo ""
+    echo -e "  ${Y}!${NC}  ${W}Coba cara kedua...${NC}"
+    run_task "Install tanpa scripts" "npm install --ignore-scripts"
+    run_task "Rebuild native modules" "npm rebuild --build-from-source"
+    NPM_EXIT=$?
+fi
 
 echo ""
 
 if [ $NPM_EXIT -eq 0 ]; then
     echo -e "  ${G}✓${NC}  ${W}Selesai! Edit ${C}config.js${W} dulu, terus ketik ${Y}npm start${NC}"
 else
-    echo -e "  ${R}✗${NC}  ${W}npm install gagal. Ini error terakhirnya:${NC}"
+    echo -e "  ${R}✗${NC}  ${W}npm install gagal. Error terakhir:${NC}"
     echo ""
     tail -15 "$LOGFILE" 2>/dev/null
     echo ""
-    echo -e "  ${DIM}Log lengkap: $LOGFILE${NC}"
+    echo -e "  ${DIM}Log: $LOGFILE${NC}"
 fi
 
 echo ""
