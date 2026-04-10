@@ -20,72 +20,91 @@ cat << "EOF"
 EOF
 echo -e "${NC}"
 
-echo -e "${CYAN}[*] Menyiapkan auto installer...${NC}"
+echo -e "${CYAN}[*] Menyiapkan auto installer...${NC}\n"
 sleep 1
 
-spinner() {
+show_progress() {
     local pid=$1
-    local delay=0.1
-    local spinstr='|/-\'
-    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
-        local temp=${spinstr#?}
-        printf " [%c]  " "$spinstr"
-        local spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
-        printf "\b\b\b\b\b\b"
+    local text=$2
+    local progress=0
+    local speed=2
+    
+    while [ "$(ps a | awk '{print $1}' | grep -w $pid)" ]; do
+        if [ $progress -lt 99 ]; then
+            progress=$((progress + speed))
+        fi
+        
+        printf "\r${YELLOW}[!] %-35s : [%-20s] %d%%${NC}" "$text" "$(printf '#%.0s' $(seq 1 $((progress / 5))))" "$progress"
+        sleep 0.5
     done
-    printf "    \b\b\b\b"
+    
+    wait $pid
+    printf "\r${GREEN}[✔] %-35s : [%-20s] 100%%${NC}\n" "$text" "$(printf '#%.0s' $(seq 1 20))"
 }
 
-LOADING_TEXT="[!] Mengecek sistem operasi kamu"
-echo -n -e "${YELLOW}${LOADING_TEXT}${NC}"
-sleep 2 & spinner $!
-echo -e "\n${GREEN}[✔] Sistem berhasil dikenali${NC}\n"
+printf "\r${YELLOW}[!] Mengecek OS kamu                  : [                    ] 0%%${NC}"
+sleep 1
+printf "\r${YELLOW}[!] Mengecek OS kamu                  : [##########          ] 50%%${NC}"
+sleep 1
+printf "\r${GREEN}[✔] Mengecek OS kamu                  : [####################] 100%%${NC}\n"
 
 if command -v pkg &> /dev/null; then
-    echo -e "${CYAN}[*] Tipe OS: Termux (Android)${NC}"
+    echo -e "\n${CYAN}[*] OS Terdeteksi: Termux (Android)${NC}"
     
-    echo -e "${YELLOW}[!] Sedang memperbarui package Termux...${NC}"
-    pkg update -y > /dev/null 2>&1 & spinner $!
-    pkg upgrade -y > /dev/null 2>&1 & spinner $!
+    pkg update -y > /dev/null 2>&1 & 
+    show_progress $! "Update server Termux"
     
-    echo -e "${YELLOW}[!] Menginstal package pendukung (Nodejs, FFmpeg, dll)...${NC}"
-    pkg install nodejs-lts ffmpeg libvips git build-essential python -y > /dev/null 2>&1 & spinner $!
+    pkg upgrade -y > /dev/null 2>&1 & 
+    show_progress $! "Upgrade library lokal"
+    
+    pkg install nodejs -y > /dev/null 2>&1 & 
+    show_progress $! "Menginstal Node.JS"
+    
+    pkg install ffmpeg -y > /dev/null 2>&1 & 
+    show_progress $! "Menginstal FFmpeg"
+    
+    pkg install libvips git build-essential python -y > /dev/null 2>&1 & 
+    show_progress $! "Menginstal pendukung (libvipsdll)"
     
 elif command -v apt-get &> /dev/null; then
-    echo -e "${CYAN}[*] Tipe OS: Ubuntu / Debian / VPS Linux${NC}"
+    echo -e "\n${CYAN}[*] OS Terdeteksi: Ubuntu / Debian / VPS Linux${NC}"
     
-    echo -e "${YELLOW}[!] Sedang memperbarui package apt dasar...${NC}"
-    sudo apt-get update -y > /dev/null 2>&1 & spinner $!
+    sudo apt-get update -y > /dev/null 2>&1 & 
+    show_progress $! "Update repository apt"
     
-    echo -e "${YELLOW}[!] Menginstal package pendukung utama...${NC}"
-    sudo apt-get install -y curl ffmpeg libvips-dev build-essential python3 git > /dev/null 2>&1 & spinner $!
+    sudo apt-get install -y curl ffmpeg libvips-dev build-essential python3 git > /dev/null 2>&1 & 
+    show_progress $! "Menginstal library utama"
 
     if ! command -v node &> /dev/null; then
-        echo -e "${YELLOW}[!] Menginstal Node.js versi 22...${NC}"
-        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - > /dev/null 2>&1 & spinner $!
-        sudo apt-get install -y nodejs > /dev/null 2>&1 & spinner $!
+        curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash - > /dev/null 2>&1 &
+        show_progress $! "Mengambil Node.js repo"
+        
+        sudo apt-get install -y nodejs > /dev/null 2>&1 & 
+        show_progress $! "Menginstal Node.js versi terbaru"
     fi
 
 elif command -v pacman &> /dev/null; then
-    echo -e "${CYAN}[*] Tipe OS: Arch Linux${NC}"
-    sudo pacman -Syu --noconfirm > /dev/null 2>&1 & spinner $!
-    sudo pacman -S --noconfirm nodejs npm ffmpeg vips base-devel python git > /dev/null 2>&1 & spinner $!
+    echo -e "\n${CYAN}[*] OS Terdeteksi: Arch Linux${NC}"
+    sudo pacman -Syu --noconfirm > /dev/null 2>&1 & 
+    show_progress $! "Mendownload update Arch"
+    
+    sudo pacman -S --noconfirm nodejs npm ffmpeg vips base-devel python git > /dev/null 2>&1 & 
+    show_progress $! "Menginstal Node dan kawan2"
 else
-    echo -e "${RED}[X] OS tidak dikenali! Tolong instal manual.${NC}"
+    echo -e "${RED}\n[X] OS tidak dikenali! Tolong instal manual.${NC}"
     sleep 2
     exit 1
 fi
 
-echo -e "${GREEN}[✔] Semua package pendukung telah berhasil diinstal!${NC}\n"
+echo -e "\n${GREEN}[✔] Mantap! Semua module dasar berhasil tersetting.${NC}\n"
 
-echo -e "${CYAN}[*] Sedang mendownload dan menginstal module bot (NPM)...${NC}"
-npm install & spinner $!
+npm install > /dev/null 2>&1 & 
+show_progress $! "Mengunduh module bot (NPM Local)"
 
 echo -e "\n${PURPLE}===============================================${NC}"
-echo -e "${GREEN}    [✔] INSTALASI SELESAI [✔]    ${NC}"
+echo -e "${GREEN}        [✔] INSTALASI BOT SELESAI [✔]          ${NC}"
 echo -e "${PURPLE}===============================================${NC}"
-echo -e "${CYAN}    Silakan ubah nomor kamu di file config.js  ${NC}"
-echo -e "${CYAN}    Setelah itu, nyalakan bot dengan ketik:    ${NC}"
-echo -e "${YELLOW}                 npm start                     ${NC}"
+echo -e "${CYAN}    Silakan ubah nomormu di config.js          ${NC}"
+echo -e "${CYAN}    Lalu nyalakan bot dengan ketik:            ${NC}"
+echo -e "${YELLOW}                   npm start                   ${NC}"
 echo -e "${PURPLE}===============================================${NC}\n"

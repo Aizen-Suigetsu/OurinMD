@@ -61,7 +61,7 @@ Kami menyertakan berbagai fitur seru meskipun mungkin kamu hanya menggunakannya 
 Sebelum mulai menjalankan bot impianmu, pastikan komputer/server kamu sudah memenuhi syarat ini ya:
 
 - **Node.js** (Wajib versi >= 22.0.0, **Rekomendasi pakai Node.JS versi 24.x.x LTS**). Kamu bisa [download di sini](https://nodejs.org/).
-- **Git** (Untuk mengambil source code ini).
+- **Git** (Wajib untuk mengunduh script bot ini). [Download Git untuk Windows/Mac](https://git-scm.com/downloads) | Pengguna Termux: `pkg install git`
 - **FFmpeg** (Wajib agar bot bisa bikin sticker & olah video). [Panduan Install FFmpeg Windows/Linux](https://ffmpeg.org/download.html).
 
 > [!WARNING]
