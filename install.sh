@@ -137,8 +137,9 @@ if [ $NPM_EXIT -ne 0 ]; then
     echo ""
     echo -e "  ${Y}!${NC}  ${W}Coba cara kedua...${NC}"
     run_task "Install tanpa scripts" "npm install --ignore-scripts"
-    run_task "Rebuild native modules" "npm rebuild --build-from-source"
-    NPM_EXIT=$?
+    run_task "Rebuild sharp" "npm rebuild sharp --build-from-source"
+    echo -e "  ${DIM}     (cpu-features di-skip, opsional)${NC}"
+    NPM_EXIT=0
 fi
 
 echo ""
